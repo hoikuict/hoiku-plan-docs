@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}職員表示の切替 | hoiku-plan-docs{% endblock %}
+{% block content %}
+  <section class="form-header">
+    <div>
+      <p class="eyebrow">職員表示</p>
+      <h1>職員表示の切替</h1>
+      <p class="lead">権限と表示名を切り替えて、帳票作成の見え方を確認できます。</p>
+    </div>
+  </section>
+
+  <form class="form-layout compact" method="post" action="/staff/session">
+    <input type="hidden" name="redirect" value="{{ redirect }}">
+    <section class="form-panel">
+      <h2>職員情報</h2>
+      <div class="field-grid">
+        <label>
+          <span>権限</span>
+          <select name="role">
+            {% for role, label in role_options %}
+              <option value="{{ role.value }}" {% if role == user.role %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span>表示名</span>
+          <input name="name" type="text" value="{{ user.name }}">
+        </label>
+      </div>
+    </section>
+    <div class="form-actions">
+      <button class="button button--primary" type="submit">表示を保存</button>
+    </div>
+  </form>
+
+  <form class="logout-form" method="post" action="/staff/logout">
+    <button class="button button--ghost" type="submit">初期状態に戻す</button>
+  </form>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}月案を文例から作成 | hoiku-plan-docs{% endblock %}
+{% block content %}
+  <section class="form-header">
+    <div>
+      <p class="eyebrow">文例選択</p>
+      <h1>月案を文例から作成</h1>
+      <p class="lead">{{ total_examples }}件の文例から候補を表示しています。選択後に修正できます。</p>
+    </div>
+  </section>
+
+  <form class="form-layout compact" method="get" action="/bunrei/monthly">
+    <section class="form-panel">
+      <h2>候補の条件</h2>
+      <div class="field-grid">
+        <label>
+          <span>年齢</span>
+          <select name="age_class">
+            {% for age in age_options %}
+              <option value="{{ age }}" {% if age == selected_age_class %}selected{% endif %}>{{ age }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span>月</span>
+          <select name="month">
+            {% for month in month_options %}
+              <option value="{{ month }}" {% if month == selected_month %}selected{% endif %}>{{ month }}月</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+      <div class="form-actions">
+        <button class="button button--secondary" type="submit">候補を表示</button>
+      </div>
+    </section>
+  </form>
+
+  <form class="form-layout" method="post" action="/bunrei/monthly">
+    <input type="hidden" name="age_class" value="{{ selected_age_class }}">
+    <input type="hidden" name="month" value="{{ selected_month }}">
+    <section class="form-panel">
+      <h2>基本情報</h2>
+      <div class="field-grid">
+        <label>
+          <span>対象月</span>
+          <input name="target_month" type="month" value="2026-{{ '%02d'|format(selected_month) }}">
+        </label>
+        <label>
+          <span>クラス名</span>
+          <input name="class_name" type="text" value="{{ selected_age_class }} ひまわり組">
+        </label>
+        <label>
+          <span>クラス</span>
+          <input name="classroom_ref" type="text" value="{{ default_classroom_ref }}">
+        </label>
+        <label>
+          <span>作成者</span>
+          <input name="owner_name" type="text" value="{{ user.name }}">
+        </label>
+      </div>
+    </section>
+
+    {% include "bunrei/_candidate_groups.html" %}
+
+    <div class="form-actions">
+      <a class="button button--ghost" href="/">戻る</a>
+      <button class="button button--primary" type="submit">選んだ文例で作成して修正へ</button>
+    </div>
+  </form>
+{% endblock %}

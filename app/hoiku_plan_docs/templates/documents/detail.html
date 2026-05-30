@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ document.title }} | hoiku-plan-docs{% endblock %}
+{% block content %}
+  <section class="document-header">
+    <div>
+      <p class="eyebrow">{{ document.document_type_label }}</p>
+      <h1>{{ document.title }}</h1>
+      <p class="lead">園: {{ document.nursery_label }} / クラス: {{ document.classroom_label }} / 作成者: {{ document.owner_name }}</p>
+    </div>
+    <div class="document-header__actions">
+      <span class="status status--{{ document.status.value }}">{{ document.status_label }}</span>
+      {% if user.can_edit and document.can_edit_body %}
+        <a class="button button--primary" href="/documents/{{ document.id }}/edit">修正</a>
+      {% endif %}
+      <button class="button button--secondary" type="button" onclick="window.print()">印刷</button>
+    </div>
+  </section>
+
+  {% if document.confirmation_items %}
+    <section class="notice">
+      <strong>確認が必要な入力</strong>
+      <span>{{ document.confirmation_items | join("、") }}</span>
+    </section>
+  {% endif %}
+
+  <section class="status-panel">
+    <form method="post" action="/documents/{{ document.id }}/status" class="status-form">
+      {% if user.can_edit %}
+        <button class="button button--secondary" name="status" value="draft">下書きへ戻す</button>
+        <button class="button button--primary" name="status" value="in_review">レビュー依頼</button>
+      {% endif %}
+      {% if user.is_admin %}
+        <button class="button button--success" name="status" value="approved">承認</button>
+        <button class="button button--danger" name="status" value="rejected">差戻し</button>
+        <button class="button button--ghost" name="status" value="archived">アーカイブ</button>
+      {% endif %}
+    </form>
+  </section>
+
+  <article class="report-sheet">
+    <header class="report-sheet__meta">
+      <span>{{ document.document_type_label }}</span>
+      <span>{% if document.school_year %}{{ document.school_year }}年度{% endif %}{% if document.target_month %}{{ document.target_month }}{% endif %}</span>
+      <span>{{ document.status_label }}</span>
+    </header>
+    {% for section in document.sections %}
+      <section class="report-section">
+        <div class="report-section__heading">
+          <h2>{{ section.title }}</h2>
+        </div>
+        <p>{{ section.body }}</p>
+        <footer class="report-section__footer">
+          <span>
+            {% for tag in section.evidence_tags %}
+              <b>{{ tag }}</b>
+            {% endfor %}
+          </span>
+        </footer>
+        {% if section.needs_confirmation %}
+          <div class="inline-note">{{ section.editor_note or "確認が必要です。" }}</div>
+        {% endif %}
+      </section>
+    {% endfor %}
+  </article>
+{% endblock %}

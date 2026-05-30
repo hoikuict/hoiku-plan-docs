@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ document.title }} を修正 | hoiku-plan-docs{% endblock %}
+{% block content %}
+  <section class="form-header">
+    <div>
+      <p class="eyebrow">{{ document.document_type_label }}</p>
+      <h1>帳票を修正</h1>
+      <p class="lead">園: {{ document.nursery_label }} / クラス: {{ document.classroom_label }} / {{ document.status_label }}</p>
+    </div>
+  </section>
+
+  <form class="form-layout" method="post" action="/documents/{{ document.id }}">
+    <section class="form-panel">
+      <h2>基本情報</h2>
+      <div class="field-grid">
+        <label>
+          <span>タイトル</span>
+          <input name="title" type="text" value="{{ document.title }}">
+        </label>
+        <label>
+          <span>作成者</span>
+          <input name="owner_name" type="text" value="{{ document.owner_name }}">
+        </label>
+      </div>
+      <label>
+        <span>確認が必要な入力</span>
+        <textarea name="confirmation_items" rows="3">{{ confirmation_items_text }}</textarea>
+      </label>
+    </section>
+
+    <section class="form-panel">
+      <h2>セクション本文</h2>
+      <div class="edit-section-list">
+        {% for section in document.sections %}
+          <div class="edit-section">
+            <div class="report-section__heading">
+              <h3>{{ section.title }}</h3>
+            </div>
+            <label>
+              <span>本文</span>
+              <textarea name="body_{{ section.section_key }}" rows="6">{{ section.body }}</textarea>
+            </label>
+            <label>
+              <span>編集メモ</span>
+              <input name="editor_note_{{ section.section_key }}" type="text" value="{{ section.editor_note or '' }}">
+            </label>
+            {% if section.needs_confirmation %}
+              <label class="check-row">
+                <input name="confirmed_{{ section.section_key }}" type="checkbox" value="yes">
+                <span>このセクションを確認済みにする</span>
+              </label>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <div class="form-actions">
+      <a class="button button--ghost" href="/documents/{{ document.id }}">戻る</a>
+      <button class="button button--primary" type="submit">修正を保存</button>
+    </div>
+  </form>
+{% endblock %}

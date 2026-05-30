@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}年案を文例から作成 | hoiku-plan-docs{% endblock %}
+{% block content %}
+  <section class="form-header">
+    <div>
+      <p class="eyebrow">文例選択</p>
+      <h1>年案を文例から作成</h1>
+      <p class="lead">{{ total_examples }}件の文例から候補を表示しています。選択後に修正できます。</p>
+    </div>
+  </section>
+
+  <form class="form-layout compact" method="get" action="/bunrei/annual">
+    <section class="form-panel">
+      <h2>候補の条件</h2>
+      <div class="field-grid">
+        <label>
+          <span>年齢</span>
+          <select name="age_class">
+            {% for age in age_options %}
+              <option value="{{ age }}" {% if age == selected_age_class %}selected{% endif %}>{{ age }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span>年度</span>
+          <input name="school_year" type="number" value="{{ school_year }}">
+        </label>
+      </div>
+      <div class="form-actions">
+        <button class="button button--secondary" type="submit">候補を表示</button>
+      </div>
+    </section>
+  </form>
+
+  <form class="form-layout" method="post" action="/bunrei/annual">
+    <input type="hidden" name="age_class" value="{{ selected_age_class }}">
+    <section class="form-panel">
+      <h2>基本情報</h2>
+      <div class="field-grid">
+        <label>
+          <span>年度</span>
+          <input name="school_year" type="number" value="{{ school_year }}">
+        </label>
+        <label>
+          <span>クラス名</span>
+          <input name="class_name" type="text" value="{{ selected_age_class }} ひまわり組">
+        </label>
+        <label>
+          <span>クラス</span>
+          <input name="classroom_ref" type="text" value="{{ default_classroom_ref }}">
+        </label>
+        <label>
+          <span>作成者</span>
+          <input name="owner_name" type="text" value="{{ user.name }}">
+        </label>
+      </div>
+    </section>
+
+    {% include "bunrei/_candidate_groups.html" %}
+
+    <div class="form-actions">
+      <a class="button button--ghost" href="/">戻る</a>
+      <button class="button button--primary" type="submit">選んだ文例で作成して修正へ</button>
+    </div>
+  </form>
+{% endblock %}
