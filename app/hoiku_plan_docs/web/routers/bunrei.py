@@ -49,8 +49,8 @@ async def create_monthly_from_bunrei(request: Request, user: CurrentUser):
     require_can_edit(user)
     form = await request.form()
     target_month = str(form.get("target_month") or "2026-04")
-    class_name = str(form.get("class_name") or "5歳児 ひまわり組").strip()
     classroom_ref = str(form.get("classroom_ref") or (user.classroom_refs[0] if user.classroom_refs else DEFAULT_CLASSROOM_REFS[0]))
+    class_name = str(form.get("class_name") or classroom_ref).strip()
     owner_name = str(form.get("owner_name") or user.name).strip()
     require_classroom_access(user, classroom_ref)
 
@@ -106,8 +106,8 @@ async def create_annual_from_bunrei(request: Request, user: CurrentUser):
     require_can_edit(user)
     form = await request.form()
     school_year = int(form.get("school_year") or 2026)
-    class_name = str(form.get("class_name") or "5歳児 ひまわり組").strip()
     classroom_ref = str(form.get("classroom_ref") or (user.classroom_refs[0] if user.classroom_refs else DEFAULT_CLASSROOM_REFS[0]))
+    class_name = str(form.get("class_name") or classroom_ref).strip()
     owner_name = str(form.get("owner_name") or user.name).strip()
     require_classroom_access(user, classroom_ref)
 

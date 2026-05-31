@@ -54,6 +54,31 @@ class AppTestCase(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
+    def test_staff_role_can_be_switched_to_admin(self) -> None:
+        login = self.client.get("/staff/login")
+        self.assertEqual(login.status_code, 200)
+        self.assertIn("この内容に切り替える", login.text)
+
+        response = self.client.post(
+            "/staff/session",
+            data={"role": "admin", "name": "主任"},
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 303)
+
+        home = self.client.get("/")
+        self.assertEqual(home.status_code, 200)
+        self.assertIn("主任", home.text)
+        self.assertIn("管理者", home.text)
+
+    def test_plan_forms_show_single_class_field(self) -> None:
+        for path in ("/annual-plans/new", "/monthly-plans/new", "/bunrei/annual", "/bunrei/monthly"):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertNotIn("クラス名", response.text)
+                self.assertEqual(response.text.count("<span>クラス</span>"), 1)
+
     def test_edit_created_document(self) -> None:
         self.client.post(
             "/annual-plans",

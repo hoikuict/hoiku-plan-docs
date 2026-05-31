@@ -1,12 +1,12 @@
 # hoiku-plan-docs
 
 `hoiku-plan-docs` は、`open-hoikuict` ベータ向けの文書作成機能を切り出して初期実装するための FastAPI アプリです。
-最終的に `hoiku-plan-writer` の実用版と差し替えやすいように、認証・権限・外部参照・文書契約を先に固定します。
+最終的に `hoiku-plan-writer` の実用版と差し替えやすいように、認証・権限・安定ID・文書契約を先に固定します。
 
 ## 今回の初期実装
 
 - `FastAPI + Jinja2` の最小 Web 構成
-- open-hoikuict / hoiku-plan-writer と合わせたサンプル職員認証
+- open-hoikuict / hoiku-plan-writer と合わせた職員セッション
 - 年案、月案の帳票作成 UI
 - 文例データベースから候補を選んで年案・月案を作成する UI
 - 作成済み帳票の一覧、詳細、印刷向けプレビュー
@@ -25,7 +25,7 @@
 | `can_edit` | 文書作成、編集、レビュー依頼 |
 | `admin` | `can_edit` に加えて承認、差戻し、アーカイブ |
 
-職員セッションは、操作職員・園・担当クラスの安定した識別情報を持ちます。本体統合時はサンプル用 cookie 実装を open-hoikuict 側の認証解決に差し替えます。
+職員セッションは、操作職員・園・担当クラスの安定した識別情報を持ちます。本体統合時は現在の cookie 実装を open-hoikuict 側の認証解決に差し替えます。
 
 ### 文書種別
 
@@ -77,7 +77,7 @@ uvicorn hoiku_plan_docs.main:app --reload --port 8020
 - `/documents/` : 帳票一覧
 - `/documents/{document_id}` : 帳票詳細、印刷向けプレビュー、ステータス操作
 - `/documents/{document_id}/edit` : 下書き・差戻し帳票の修正
-- `/staff/login` : サンプル職員表示の切り替え
+- `/staff/login` : 職員表示の切り替え
 
 ## API
 
@@ -89,7 +89,7 @@ uvicorn hoiku_plan_docs.main:app --reload --port 8020
 ## 統合方針
 
 1. open-hoikuict 側から iframe ではなく通常リンクまたは reverse proxy 配下で呼び出す。
-2. サンプル認証を `StaffAuthBackend` 実装差し替えで本体セッション解決へ寄せる。
-3. 操作職員、園、クラスは本体内部 PK ではなく安定した外部識別情報として受け渡す。
+2. 職員セッションを `StaffAuthBackend` 実装差し替えで本体セッション解決へ寄せる。
+3. 操作職員、園、クラスは本体内部 PK ではなく安定した識別情報として受け渡す。
 4. `document_type`、`status`、`section_key` は integration contract を唯一の外部契約とする。
 5. 実用版との差し替え時は生成サービスと保存層を差し替え、UI と契約を維持する。

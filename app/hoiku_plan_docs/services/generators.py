@@ -45,8 +45,8 @@ def _needs_note(value: str, label: str) -> tuple[bool, str | None]:
 
 def generate_annual_plan(data: dict[str, str], user: StaffUser) -> PlanDocument:
     school_year = int(clean_text(data.get("school_year")) or "2026")
-    class_name = clean_text(data.get("class_name")) or "クラス未設定"
     classroom_ref = clean_text(data.get("classroom_ref")) or user.classroom_refs[0]
+    class_name = clean_text(data.get("class_name")) or classroom_ref or "クラス未設定"
     owner_name = clean_text(data.get("owner_name")) or user.name
     focus_growth = clean_text(data.get("focus_growth"))
     class_outlook = clean_text(data.get("class_outlook"))
@@ -150,8 +150,8 @@ def generate_annual_plan(data: dict[str, str], user: StaffUser) -> PlanDocument:
 
 def generate_monthly_plan(data: dict[str, str], user: StaffUser) -> PlanDocument:
     target_month = clean_text(data.get("target_month")) or "2026-04"
-    class_name = clean_text(data.get("class_name")) or "クラス未設定"
     classroom_ref = clean_text(data.get("classroom_ref")) or user.classroom_refs[0]
+    class_name = clean_text(data.get("class_name")) or classroom_ref or "クラス未設定"
     owner_name = clean_text(data.get("owner_name")) or user.name
     related_annual_summary = clean_text(data.get("related_annual_summary"))
     previous_reflection = clean_text(data.get("previous_reflection"))

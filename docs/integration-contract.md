@@ -1,12 +1,12 @@
 # 連携契約
 
 この文書は `hoiku-plan-docs`、`open-hoikuict`、`hoiku-plan-writer` の間で共有する文書作成機能の初期契約です。
-キー名、状態名、参照形式は後方互換を維持します。
+キー名、状態名、識別形式は後方互換を維持します。
 
 ## 対象範囲
 
 対象は年案・月案の作成、レビュー、承認、参照です。
-園児、家庭、出欠、本体職員 DB には直接依存しません。本体側の値は外部参照として受け取ります。
+園児、家庭、出欠、本体職員 DB には直接依存しません。本体側の値は安定した識別情報として受け取ります。
 
 ## 職員認証
 
@@ -15,10 +15,10 @@
 | field | type | required | example | note |
 | --- | --- | --- | --- | --- |
 | `role` | string | yes | `can_edit` | `view_only` / `can_edit` / `admin` |
-| `actor_ref` | string | yes | `staff:demo-editor` | 操作主体の安定参照 |
-| `nursery_ref` | string | yes | `nursery:demo` | 園の安定参照 |
-| `classroom_refs` | string[] | yes | `["classroom:5yo-a"]` | 担当クラスの安定参照 |
-| `name` | string | no | `サンプル職員` | 表示用 |
+| `actor_ref` | string | yes | `職員:担任` | 操作主体の安定ID |
+| `nursery_ref` | string | yes | `ひかり保育園` | 園の安定ID |
+| `classroom_refs` | string[] | yes | `["5歳児 ひまわり組"]` | 担当クラスの安定ID |
+| `name` | string | no | `担任` | 表示用 |
 
 ### 権限
 
@@ -72,9 +72,9 @@
   "document_type": "annual_plan",
   "status": "draft",
   "title": "2026年度 年案（5歳児 ひまわり組）",
-  "nursery_ref": "サンプル園",
+  "nursery_ref": "ひかり保育園",
   "classroom_ref": "5歳児 ひまわり組",
-  "actor_ref": "職員:サンプル",
+  "actor_ref": "職員:担任",
   "school_year": 2026,
   "target_month": null,
   "sections": [
@@ -144,6 +144,7 @@
 | `form.*` | `入力` |
 | `annual.*` | `入力` |
 | `monthly.*` | `入力` |
+| `bunrei.*` | `文例` |
 | `outline.*` | `AI構成` |
 | `linking.*` | `AI構成` |
 

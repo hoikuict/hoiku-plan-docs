@@ -56,12 +56,13 @@ def create_annual_plan(
     term_4_note: Annotated[str, Form()] = "",
 ):
     require_can_edit(user)
-    selected_classroom_ref = classroom_ref or (user.classroom_refs[0] if user.classroom_refs else DEFAULT_CLASSROOM_REFS[0])
+    selected_classroom_ref = classroom_ref or class_name or (user.classroom_refs[0] if user.classroom_refs else DEFAULT_CLASSROOM_REFS[0])
+    selected_class_name = class_name or selected_classroom_ref
     require_classroom_access(user, selected_classroom_ref)
     document = generate_annual_plan(
         {
             "school_year": school_year,
-            "class_name": class_name,
+            "class_name": selected_class_name,
             "classroom_ref": selected_classroom_ref,
             "owner_name": owner_name,
             "class_outlook": class_outlook,
@@ -110,12 +111,13 @@ def create_monthly_plan(
     class_notes: Annotated[str, Form()] = "",
 ):
     require_can_edit(user)
-    selected_classroom_ref = classroom_ref or (user.classroom_refs[0] if user.classroom_refs else DEFAULT_CLASSROOM_REFS[0])
+    selected_classroom_ref = classroom_ref or class_name or (user.classroom_refs[0] if user.classroom_refs else DEFAULT_CLASSROOM_REFS[0])
+    selected_class_name = class_name or selected_classroom_ref
     require_classroom_access(user, selected_classroom_ref)
     document = generate_monthly_plan(
         {
             "target_month": target_month,
-            "class_name": class_name,
+            "class_name": selected_class_name,
             "classroom_ref": selected_classroom_ref,
             "owner_name": owner_name,
             "related_annual_summary": related_annual_summary,

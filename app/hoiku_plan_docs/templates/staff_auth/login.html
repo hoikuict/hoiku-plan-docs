@@ -11,6 +11,9 @@
 
   <form class="form-layout compact" method="post" action="/staff/session">
     <input type="hidden" name="redirect" value="{{ redirect }}">
+    <input type="hidden" name="actor_ref" value="{{ user.actor_ref }}">
+    <input type="hidden" name="nursery_ref" value="{{ user.nursery_ref }}">
+    <input type="hidden" name="classroom_refs" value="{{ user.classroom_refs_text }}">
     <section class="form-panel">
       <h2>職員情報</h2>
       <div class="field-grid">
@@ -29,7 +32,7 @@
       </div>
     </section>
     <div class="form-actions">
-      <button class="button button--primary" type="submit">表示を保存</button>
+      <button class="button button--primary" type="submit">この内容に切り替える</button>
     </div>
   </form>
 

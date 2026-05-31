@@ -12,6 +12,7 @@ import sqlite3
 import json
 import itertools
 import hashlib
+from pathlib import Path
 from framework import (
     PLAN_TYPES, AGE_BANDS, RYOIKI, YOUGO, RYOIKI_DIRECTION, YOUGO_DIRECTION,
     MONTHS, SEASON, PERIODS, PLAN_ITEMS,
@@ -97,7 +98,11 @@ def rows():
     return out
 
 
-def build(db_path="bunrei.sqlite"):
+BASE_DIR = Path(__file__).resolve().parent
+
+
+def build(db_path=None):
+    db_path = Path(db_path) if db_path else BASE_DIR / "bunrei.sqlite"
     data = rows()
     # 重複除去（同一文面・同一軸）
     seen, uniq = set(), []
@@ -154,7 +159,8 @@ def build(db_path="bunrei.sqlite"):
     con.close()
 
     # JSONL サンプル書き出し
-    with open("sample.jsonl", "w", encoding="utf-8") as f:
+    sample_path = db_path.with_name("sample.jsonl")
+    with sample_path.open("w", encoding="utf-8") as f:
         for r in uniq[:40]:
             f.write(json.dumps({k: r[k] for k in
                     ["id","plan_type","age_class","age_detail","month","item","ryoiki","direction","text"]},

@@ -9,16 +9,16 @@ from fastapi import Depends, HTTPException, Request, Response
 from .contracts import ROLE_LABELS, Role
 
 
-SAMPLE_ROLE_COOKIE = "sample_role"
-SAMPLE_ACTOR_REF_COOKIE = "sample_actor_ref"
-SAMPLE_NURSERY_REF_COOKIE = "sample_nursery_ref"
-SAMPLE_CLASSROOMS_COOKIE = "sample_classroom_refs"
-SAMPLE_STAFF_NAME_COOKIE = "sample_staff_name"
+STAFF_ROLE_COOKIE = "staff_role"
+STAFF_ACTOR_ID_COOKIE = "staff_actor_id"
+STAFF_NURSERY_ID_COOKIE = "staff_nursery_id"
+STAFF_CLASSROOMS_COOKIE = "staff_classrooms"
+STAFF_NAME_COOKIE = "staff_name"
 COOKIE_MAX_AGE = 60 * 60 * 24
-DEFAULT_ACTOR_REF = "職員:サンプル"
-DEFAULT_NURSERY_REF = "サンプル園"
+DEFAULT_ACTOR_REF = "職員:担任"
+DEFAULT_NURSERY_REF = "ひかり保育園"
 DEFAULT_CLASSROOM_REFS = ("5歳児 ひまわり組",)
-DEFAULT_STAFF_NAME = "サンプル職員"
+DEFAULT_STAFF_NAME = "担任"
 
 
 def _parse_role(raw: str | None) -> Role:
@@ -27,10 +27,21 @@ def _parse_role(raw: str | None) -> Role:
     return Role.CAN_EDIT
 
 
+def _encode_cookie_value(value: str) -> str:
+    return quote(value, safe="")
+
+
+def _decode_cookie_value(value: str | None) -> str | None:
+    if value is None:
+        return None
+    return unquote(value)
+
+
 def _parse_classroom_refs(raw: str | None) -> tuple[str, ...]:
-    if not raw:
+    decoded = _decode_cookie_value(raw)
+    if not decoded:
         return DEFAULT_CLASSROOM_REFS
-    refs = tuple(item.strip() for item in raw.split(",") if item.strip())
+    refs = tuple(item.strip() for item in decoded.split(",") if item.strip())
     return refs or DEFAULT_CLASSROOM_REFS
 
 
@@ -95,31 +106,29 @@ class StaffAuthBackend(Protocol):
     def clear_session(self, response: Response) -> None: ...
 
 
-class SampleStaffAuthBackend:
+class CookieStaffAuthBackend:
     def get_current_user(self, request: Request) -> StaffUser:
-        role = _parse_role(request.query_params.get("as") or request.cookies.get(SAMPLE_ROLE_COOKIE))
+        role = _parse_role(request.query_params.get("as") or request.cookies.get(STAFF_ROLE_COOKIE))
         actor_ref = (
             request.query_params.get("actor_ref")
-            or request.cookies.get(SAMPLE_ACTOR_REF_COOKIE)
+            or _decode_cookie_value(request.cookies.get(STAFF_ACTOR_ID_COOKIE))
             or DEFAULT_ACTOR_REF
         )
         nursery_ref = (
             request.query_params.get("nursery_ref")
-            or request.cookies.get(SAMPLE_NURSERY_REF_COOKIE)
+            or _decode_cookie_value(request.cookies.get(STAFF_NURSERY_ID_COOKIE))
             or DEFAULT_NURSERY_REF
         )
         classroom_refs = _parse_classroom_refs(
-            request.query_params.get("classrooms") or request.cookies.get(SAMPLE_CLASSROOMS_COOKIE)
+            request.query_params.get("classrooms") or request.cookies.get(STAFF_CLASSROOMS_COOKIE)
         )
-        raw_name = request.query_params.get("name") or request.cookies.get(SAMPLE_STAFF_NAME_COOKIE) or quote(
-            DEFAULT_STAFF_NAME, safe=""
-        )
+        raw_name = request.query_params.get("name") or _decode_cookie_value(request.cookies.get(STAFF_NAME_COOKIE))
         return StaffUser(
             role=role,
             actor_ref=actor_ref,
             nursery_ref=nursery_ref,
             classroom_refs=classroom_refs,
-            name=unquote(raw_name),
+            name=raw_name or DEFAULT_STAFF_NAME,
         )
 
     def set_session(
@@ -132,21 +141,25 @@ class SampleStaffAuthBackend:
         classroom_refs: tuple[str, ...],
         name: str,
     ) -> None:
-        response.set_cookie(SAMPLE_ROLE_COOKIE, role.value, max_age=COOKIE_MAX_AGE)
-        response.set_cookie(SAMPLE_ACTOR_REF_COOKIE, actor_ref, max_age=COOKIE_MAX_AGE)
-        response.set_cookie(SAMPLE_NURSERY_REF_COOKIE, nursery_ref, max_age=COOKIE_MAX_AGE)
-        response.set_cookie(SAMPLE_CLASSROOMS_COOKIE, ",".join(classroom_refs), max_age=COOKIE_MAX_AGE)
-        response.set_cookie(SAMPLE_STAFF_NAME_COOKIE, quote(name, safe=""), max_age=COOKIE_MAX_AGE)
+        response.set_cookie(STAFF_ROLE_COOKIE, role.value, max_age=COOKIE_MAX_AGE)
+        response.set_cookie(STAFF_ACTOR_ID_COOKIE, _encode_cookie_value(actor_ref), max_age=COOKIE_MAX_AGE)
+        response.set_cookie(STAFF_NURSERY_ID_COOKIE, _encode_cookie_value(nursery_ref), max_age=COOKIE_MAX_AGE)
+        response.set_cookie(
+            STAFF_CLASSROOMS_COOKIE,
+            _encode_cookie_value(",".join(classroom_refs)),
+            max_age=COOKIE_MAX_AGE,
+        )
+        response.set_cookie(STAFF_NAME_COOKIE, _encode_cookie_value(name), max_age=COOKIE_MAX_AGE)
 
     def clear_session(self, response: Response) -> None:
-        response.delete_cookie(SAMPLE_ROLE_COOKIE)
-        response.delete_cookie(SAMPLE_ACTOR_REF_COOKIE)
-        response.delete_cookie(SAMPLE_NURSERY_REF_COOKIE)
-        response.delete_cookie(SAMPLE_CLASSROOMS_COOKIE)
-        response.delete_cookie(SAMPLE_STAFF_NAME_COOKIE)
+        response.delete_cookie(STAFF_ROLE_COOKIE)
+        response.delete_cookie(STAFF_ACTOR_ID_COOKIE)
+        response.delete_cookie(STAFF_NURSERY_ID_COOKIE)
+        response.delete_cookie(STAFF_CLASSROOMS_COOKIE)
+        response.delete_cookie(STAFF_NAME_COOKIE)
 
 
-_staff_auth_backend: StaffAuthBackend = SampleStaffAuthBackend()
+_staff_auth_backend: StaffAuthBackend = CookieStaffAuthBackend()
 
 
 def configure_staff_auth_backend(backend: StaffAuthBackend) -> None:
@@ -155,7 +168,7 @@ def configure_staff_auth_backend(backend: StaffAuthBackend) -> None:
 
 
 def reset_staff_auth_backend() -> None:
-    configure_staff_auth_backend(SampleStaffAuthBackend())
+    configure_staff_auth_backend(CookieStaffAuthBackend())
 
 
 def get_current_staff_user(request: Request) -> StaffUser:
