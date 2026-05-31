@@ -130,6 +130,10 @@
 | `children_snapshot` | 子どもの姿の捉え |
 | `monthly_environment` | 環境構成 |
 | `monthly_support` | 援助 |
+| `monthly_health_safety` | 健康・安全への配慮 |
+| `monthly_food_education` | 食育 |
+| `monthly_events` | 行事 |
+| `monthly_10_perspectives` | 10の姿 |
 | `monthly_family_collaboration` | 家庭連携 |
 | `monthly_reflection_viewpoint` | 月末の振り返り観点 |
 
@@ -145,10 +149,17 @@
 | `annual.*` | `入力` |
 | `monthly.*` | `入力` |
 | `bunrei.*` | `文例` |
+| `facility.*` | `園文例` |
 | `outline.*` | `AI構成` |
 | `linking.*` | `AI構成` |
 
 各 section は最低 1 つ以上の `source_refs` と `evidence_tags` を持ちます。
+
+### 文例DB
+
+共通文例は `bunrei.*`、園文例は `facility.*` として根拠に残します。園文例は `nursery_ref` で必ず絞り込み、他園の候補として返しません。園文例の `masked` は自動マスクの有無であり、人による確認を省略する根拠にはしません。
+
+園文例は画面から 1 件ずつ追加するほか、CSV・Excel（.xlsx）でまとめて取り込みます。取り込み列は `計画種別`、`年齢`、`月`、`項目`、`領域・観点`、`出所メモ`、`本文` を基本形とし、英語列名 `plan_type`、`age_class`、`month`、`item`、`ryoiki`、`source_note`、`text` も受け付けます。取り込み画面はこの基本形の空CSV・空Excelを配布します。取り込み時も `nursery_ref` は現在の職員セッションから固定し、利用者入力では上書きしません。
 
 ## 承認ログ
 

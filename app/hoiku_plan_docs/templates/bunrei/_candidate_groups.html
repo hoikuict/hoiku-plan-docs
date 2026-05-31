@@ -10,8 +10,11 @@
               <label class="bunrei-option">
                 <input type="checkbox" name="section_{{ group.section_key }}" value="{{ example.id }}">
                 <span>
-                  <strong>{{ example.label }}</strong>
+                  <strong>{{ example.source_label }} / {{ example.label }}</strong>
                   <em>{{ example.text }}</em>
+                  {% if example.masked %}
+                    <small>自動マスクあり。確認してから使ってください。</small>
+                  {% endif %}
                 </span>
               </label>
             {% endfor %}

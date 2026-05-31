@@ -32,6 +32,8 @@ class Bunrei(SQLModel, table=True):
     ryoiki: Optional[str] = Field(default=None, index=True,
                                   description="5領域/乳児3視点/養護。一般項目はNull")
     direction: Optional[str] = Field(default=None, description="ねらいの方向性（指針由来）")
+    juu_no_sugata: Optional[str] = Field(default=None, index=True,
+                                         description="10の姿。3歳以上の付加軸")
 
     # ---- 本文 ----
     text: str = Field(description="文例本文")
@@ -43,3 +45,22 @@ class Bunrei(SQLModel, table=True):
                                   description="分類枠組みの出所。指針告示由来")
     needs_review: bool = Field(default=True,
                                description="保育士監修が未了かどうか。Trueは本番非推奨")
+
+
+class BunreiFacility(SQLModel, table=True):
+    __tablename__ = "bunrei_facility"
+
+    id: str = Field(primary_key=True, max_length=14)
+    nursery_ref: str = Field(index=True, description="園スコープ")
+    visibility: str = Field(default="facility_private", description="園内限定")
+    plan_type: Optional[str] = Field(default=None, index=True)
+    age_class: Optional[str] = Field(default=None, index=True)
+    month: Optional[int] = Field(default=None, index=True)
+    item: Optional[str] = Field(default=None, index=True)
+    ryoiki: Optional[str] = Field(default=None, index=True)
+    text: str = Field(description="園文例本文")
+    text_provenance: str = Field(default="facility")
+    masked: bool = Field(default=False, description="自動マスクが入ったか")
+    needs_review: bool = Field(default=True, description="園内確認が必要")
+    source_note: Optional[str] = Field(default=None)
+    imported_at: str

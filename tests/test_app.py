@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import io
+import os
+import shutil
 import sys
+import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -13,15 +18,92 @@ from hoiku_plan_docs.services.bunrei import annual_candidate_groups, monthly_can
 from hoiku_plan_docs.store import document_store
 
 
+def _xlsx_bytes(rows: list[list[str]]) -> bytes:
+    def cell_name(row_index: int, col_index: int) -> str:
+        name = ""
+        col = col_index + 1
+        while col:
+            col, remainder = divmod(col - 1, 26)
+            name = chr(ord("A") + remainder) + name
+        return f"{name}{row_index}"
+
+    sheet_rows = []
+    for row_index, row in enumerate(rows, start=1):
+        cells = "".join(
+            f'<c r="{cell_name(row_index, col_index)}" t="inlineStr"><is><t>{value}</t></is></c>'
+            for col_index, value in enumerate(row)
+        )
+        sheet_rows.append(f'<row r="{row_index}">{cells}</row>')
+    sheet_xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        f"<sheetData>{''.join(sheet_rows)}</sheetData>"
+        "</worksheet>"
+    )
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr(
+            "xl/workbook.xml",
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+            'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            '<sheets><sheet name="園文例" sheetId="1" r:id="rId1"/></sheets></workbook>',
+        )
+        archive.writestr(
+            "xl/_rels/workbook.xml.rels",
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+            "</Relationships>",
+        )
+        archive.writestr("xl/worksheets/sheet1.xml", sheet_xml)
+    return buffer.getvalue()
+
+
 class AppTestCase(unittest.TestCase):
     def setUp(self) -> None:
         document_store.clear()
+        self._old_facility_db_path = os.environ.get("HOIKU_FACILITY_BUNREI_DB_PATH")
+        self._temp_dir = tempfile.TemporaryDirectory()
+        root = Path(__file__).resolve().parents[1]
+        source_db = next(
+            path
+            for path in (
+                root / "gen_bunrei" / "facility.sqlite",
+                root / "gen_bunnrei" / "facility.sqlite",
+            )
+            if path.exists()
+        )
+        self.facility_db_path = Path(self._temp_dir.name) / "facility.sqlite"
+        shutil.copyfile(source_db, self.facility_db_path)
+        os.environ["HOIKU_FACILITY_BUNREI_DB_PATH"] = str(self.facility_db_path)
         self.client = TestClient(create_app())
+
+    def tearDown(self) -> None:
+        if self._old_facility_db_path is None:
+            os.environ.pop("HOIKU_FACILITY_BUNREI_DB_PATH", None)
+        else:
+            os.environ["HOIKU_FACILITY_BUNREI_DB_PATH"] = self._old_facility_db_path
+        self._temp_dir.cleanup()
 
     def test_home_loads(self) -> None:
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertIn("年案・月案の帳票作成", response.text)
+        self.assertIn("自作文例を追加", response.text)
+        self.assertIn('<a href="/">指導計画作成</a>', response.text)
+        self.assertNotIn('<a href="/annual-plans/new">年案作成</a>', response.text)
+        self.assertNotIn('<a href="/monthly-plans/new">月案作成</a>', response.text)
+        self.assertNotIn('<a href="/bunrei/monthly">文例選択</a>', response.text)
+        self.assertNotIn('<a class="button button--primary" href="/annual-plans/new">年案を作成</a>', response.text)
+        self.assertNotIn('<a class="button button--secondary" href="/monthly-plans/new">月案を作成</a>', response.text)
+
+    def test_document_list_links_back_to_plan_creation(self) -> None:
+        response = self.client.get("/documents/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('<a class="button button--primary" href="/">指導案作成</a>', response.text)
+        self.assertNotIn('<a class="button button--primary" href="/annual-plans/new">年案を作成</a>', response.text)
+        self.assertNotIn('<a class="button button--secondary" href="/monthly-plans/new">月案を作成</a>', response.text)
 
     def test_create_annual_plan(self) -> None:
         response = self.client.post(
@@ -151,6 +233,9 @@ class AppTestCase(unittest.TestCase):
         selector = self.client.get("/bunrei/monthly")
         self.assertEqual(selector.status_code, 200)
         self.assertIn("月案を文例から作成", selector.text)
+        self.assertIn("健康・安全への配慮", selector.text)
+        self.assertIn("食育", selector.text)
+        self.assertIn("10の姿", selector.text)
         first_example = monthly_candidate_groups("5歳児", 4)[0].examples[0]
 
         response = self.client.post(
@@ -173,11 +258,116 @@ class AppTestCase(unittest.TestCase):
         self.assertEqual(payload["sections"][0]["section_key"], "monthly_goal")
         self.assertEqual(payload["sections"][0]["body"], first_example.text)
 
+    def test_facility_bunrei_is_scoped_to_current_nursery(self) -> None:
+        own_nursery = self.client.get("/bunrei/monthly?age_class=5歳児&month=10")
+        self.assertEqual(own_nursery.status_code, 200)
+        self.assertIn("園文例", own_nursery.text)
+
+        other_nursery = self.client.get("/bunrei/monthly?age_class=5歳児&month=10&nursery_ref=別の園")
+        self.assertEqual(other_nursery.status_code, 200)
+        self.assertNotIn("園文例", other_nursery.text)
+
+    def test_facility_bunrei_can_be_added_from_ui(self) -> None:
+        form = self.client.get("/bunrei/facility/new")
+        self.assertEqual(form.status_code, 200)
+        self.assertIn("自作文例を追加", form.text)
+        self.assertIn("園文例として追加", form.text)
+        self.assertIn("CSV・Excelからまとめて取り込み", form.text)
+        self.assertIn("空のCSVをダウンロード", form.text)
+        self.assertIn("空のExcelをダウンロード", form.text)
+
+        response = self.client.post(
+            "/bunrei/facility",
+            data={
+                "plan_type": "月案",
+                "age_class": "5歳児",
+                "month": "4",
+                "item": "食育",
+                "ryoiki": "",
+                "source_note": "テスト入力",
+                "text": "春の野菜に触れ、香りや手触りを友だちと伝え合う。",
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 303)
+        self.assertTrue(response.headers["location"].startswith("/bunrei/monthly"))
+
+        selector = self.client.get("/bunrei/monthly?age_class=5歳児&month=4")
+        self.assertEqual(selector.status_code, 200)
+        self.assertIn("園文例", selector.text)
+        self.assertIn("春の野菜に触れ", selector.text)
+
+    def test_facility_bunrei_can_be_imported_from_csv(self) -> None:
+        csv_content = "計画種別,年齢,月,項目,本文\n月案,5歳児,4,食育,旬の果物を見て香りや色に気づく。\n"
+        response = self.client.post(
+            "/bunrei/facility/import",
+            data={"default_source_note": "CSV取り込み"},
+            files={"file": ("bunrei.csv", csv_content.encode("utf-8-sig"), "text/csv")},
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 303)
+        self.assertIn("imported=1", response.headers["location"])
+
+        selector = self.client.get("/bunrei/monthly?age_class=5歳児&month=4")
+        self.assertEqual(selector.status_code, 200)
+        self.assertIn("旬の果物を見て", selector.text)
+
+    def test_facility_bunrei_can_be_imported_from_xlsx(self) -> None:
+        workbook = _xlsx_bytes(
+            [
+                ["計画種別", "年齢", "月", "項目", "本文"],
+                ["月案", "5歳児", "4", "行事", "園庭で春の会を楽しみ、進級した喜びを味わう。"],
+            ]
+        )
+        response = self.client.post(
+            "/bunrei/facility/import",
+            files={
+                "file": (
+                    "bunrei.xlsx",
+                    workbook,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 303)
+        self.assertIn("imported=1", response.headers["location"])
+
+        selector = self.client.get("/bunrei/monthly?age_class=5歳児&month=4")
+        self.assertEqual(selector.status_code, 200)
+        self.assertIn("園庭で春の会", selector.text)
+
+    def test_facility_import_templates_can_be_downloaded(self) -> None:
+        csv_template = self.client.get("/bunrei/facility/import-template.csv")
+        self.assertEqual(csv_template.status_code, 200)
+        self.assertIn("attachment", csv_template.headers["content-disposition"])
+        self.assertIn("計画種別,年齢,月,項目,領域・観点,出所メモ,本文", csv_template.content.decode("utf-8-sig"))
+
+        xlsx_template = self.client.get("/bunrei/facility/import-template.xlsx")
+        self.assertEqual(xlsx_template.status_code, 200)
+        with zipfile.ZipFile(io.BytesIO(xlsx_template.content)) as archive:
+            self.assertIn("xl/worksheets/sheet1.xml", archive.namelist())
+
+        response = self.client.post(
+            "/bunrei/facility/import",
+            files={
+                "file": (
+                    "template.xlsx",
+                    xlsx_template.content,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 303)
+        self.assertIn("imported=0", response.headers["location"])
+
     def test_annual_plan_can_be_created_from_bunrei_selection(self) -> None:
         selector = self.client.get("/bunrei/annual")
         self.assertEqual(selector.status_code, 200)
         self.assertIn("年案を文例から作成", selector.text)
         first_example = annual_candidate_groups("5歳児")[0].examples[0]
+        self.assertEqual(first_example.item, "年間目標")
 
         response = self.client.post(
             "/bunrei/annual",

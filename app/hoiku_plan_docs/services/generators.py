@@ -211,6 +211,38 @@ def generate_monthly_plan(data: dict[str, str], user: StaffUser) -> PlanDocument
             ["profile.support_policy", "form.class_notes"],
         ),
         _section(
+            definitions["monthly_health_safety"],
+            (
+                f"{seasonal_context or '季節や行事'}に応じて、体調確認、休息、水分補給、用具の安全点検を行う。"
+                " 活動量や生活リズムの個人差を見ながら、無理なく参加できるようにする。"
+            ),
+            ["knowledge.health_and_safety", "form.seasonal_context"],
+        ),
+        _section(
+            definitions["monthly_food_education"],
+            (
+                f"{seasonal_context or '季節'}に関わる食材や食文化に触れ、食べることへの関心を広げる。"
+                " 一人ひとりの食べる意欲や体調に合わせて、楽しい雰囲気を大切にする。"
+            ),
+            ["knowledge.food_education", "form.seasonal_context"],
+        ),
+        _section(
+            definitions["monthly_events"],
+            (
+                f"{seasonal_context or '今月の行事'}を、子どもの実態に合わせた無理のない形で取り入れる。"
+                " 行事そのものよりも、準備や当日の経験を通した育ちを大切にする。"
+            ),
+            ["form.seasonal_context", "profile.event_policy"],
+        ),
+        _section(
+            definitions["monthly_10_perspectives"],
+            (
+                "10の姿の観点から、遊びや生活の中で見られる主体性、協同性、言葉による伝え合い、"
+                "豊かな感性と表現などの育ちを捉え、次の経験につなげる。"
+            ),
+            ["knowledge.juu_no_sugata", "linking.next_month"],
+        ),
+        _section(
             definitions["monthly_family_collaboration"],
             (
                 f"家庭には今月のねらいと遊びの広がりを伝え、{family_context or '家庭での様子'}を聞き取る。"

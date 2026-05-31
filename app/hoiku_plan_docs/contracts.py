@@ -63,6 +63,7 @@ SOURCE_REF_PREFIX_TAGS = {
     "annual.": "入力",
     "monthly.": "入力",
     "bunrei.": "文例",
+    "facility.": "園文例",
     "outline.": "AI構成",
     "linking.": "AI構成",
 }
@@ -99,6 +100,10 @@ MONTHLY_SECTIONS: tuple[SectionDefinition, ...] = (
     SectionDefinition("children_snapshot", "子どもの姿の捉え", "現在の姿の整理"),
     SectionDefinition("monthly_environment", "環境構成", "月の環境構成"),
     SectionDefinition("monthly_support", "援助", "月の援助方針"),
+    SectionDefinition("monthly_health_safety", "健康・安全への配慮", "保健・安全面の配慮"),
+    SectionDefinition("monthly_food_education", "食育", "食育の視点"),
+    SectionDefinition("monthly_events", "行事", "月の行事"),
+    SectionDefinition("monthly_10_perspectives", "10の姿", "幼児期の終わりまでに育ってほしい姿"),
     SectionDefinition("monthly_family_collaboration", "家庭連携", "保護者との連携方針"),
     SectionDefinition("monthly_reflection_viewpoint", "月末の振り返り観点", "次月につなぐ確認観点"),
 )

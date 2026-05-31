@@ -8,7 +8,7 @@
 - `FastAPI + Jinja2` の最小 Web 構成
 - open-hoikuict / hoiku-plan-writer と合わせた職員セッション
 - 年案、月案の帳票作成 UI
-- 文例データベースから候補を選んで年案・月案を作成する UI
+- 共通文例・園文例データベースから候補を選んで年案・月案を作成する UI
 - 作成済み帳票の一覧、詳細、印刷向けプレビュー
 - 文書種別 / 状態 / セクションキー / 根拠情報の連携契約
 - 本体 DB に依存しない in-memory 保存層
@@ -52,7 +52,7 @@
 
 `section_key` は表示文言ではなく永続契約です。UI ラベルを変えてもキーは変えません。
 
-年案は `annual_goal` と `term_1_*` から `term_4_*`、月案は `monthly_goal`、`children_snapshot`、`monthly_environment`、`monthly_support`、`monthly_family_collaboration`、`monthly_reflection_viewpoint` を使います。
+年案は `annual_goal` と `term_1_*` から `term_4_*`、月案は `monthly_goal`、`children_snapshot`、`monthly_environment`、`monthly_support`、`monthly_health_safety`、`monthly_food_education`、`monthly_events`、`monthly_10_perspectives`、`monthly_family_collaboration`、`monthly_reflection_viewpoint` を使います。
 
 詳細は [docs/integration-contract.md](docs/integration-contract.md) を参照してください。
 
@@ -74,10 +74,27 @@ uvicorn hoiku_plan_docs.main:app --reload --port 8020
 - `/monthly-plans/new` : 月案作成
 - `/bunrei/annual` : 文例を選んで年案作成
 - `/bunrei/monthly` : 文例を選んで月案作成
+- `/bunrei/facility/new` : 自作文例の追加、CSV・Excel（.xlsx）取り込み
 - `/documents/` : 帳票一覧
 - `/documents/{document_id}` : 帳票詳細、印刷向けプレビュー、ステータス操作
 - `/documents/{document_id}/edit` : 下書き・差戻し帳票の修正
 - `/staff/login` : 職員表示の切り替え
+
+## 文例データベース
+
+`gen_bunnrei/bunrei.sqlite` は v2 の共通文例DBです。年案の `年間目標` と `期の振り返り観点`、月案の `健康・安全への配慮`、`食育`、`行事`、`10の姿のねらい` を含みます。
+
+`gen_bunnrei/facility.sqlite` は園内限定の文例DBです。候補表示では現在の `nursery_ref` で必ず絞り込み、他園の園文例は返しません。園文例も `needs_review=1` として扱い、選択後の修正画面で確認します。
+
+画面からの取り込みは `/bunrei/facility/new` で行います。CSV・Excel（.xlsx）は `計画種別`、`年齢`、`月`、`項目`、`領域・観点`、`出所メモ`、`本文` の列名に対応します。取り込み画面からヘッダー入りの空CSV・空Excelをダウンロードできます。`本文` だけのファイルは画面で指定した既定値を使って取り込みます。
+
+生成・取り込み:
+
+```powershell
+cd gen_bunnrei
+python generate_v2.py
+python facility_import.py sample_facility.csv --nursery "ひかり保育園"
+```
 
 ## API
 

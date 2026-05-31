@@ -1,15 +1,22 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from urllib.parse import urlencode
+
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import RedirectResponse, Response
 
 from ...auth import DEFAULT_CLASSROOM_REFS, CurrentUser, require_can_edit, require_classroom_access
 from ...contracts import DocumentType, annual_section_definitions
 from ...services.bunrei import (
+    add_facility_example,
     age_class_options,
     annual_candidate_groups,
     build_document_from_bunrei,
     count_examples,
+    facility_import_template_csv,
+    facility_import_template_xlsx,
+    facility_item_options,
+    import_facility_examples,
     is_bunrei_available,
     monthly_candidate_groups,
     selected_examples,
@@ -19,6 +26,123 @@ from ..templating import render_template
 
 
 router = APIRouter(prefix="/bunrei", tags=["bunrei"])
+
+
+@router.get("/facility/new")
+def new_facility_bunrei(
+    request: Request,
+    user: CurrentUser,
+    imported: int | None = None,
+    skipped: int | None = None,
+    masked: int | None = None,
+):
+    _ensure_available()
+    require_can_edit(user)
+    age_options = sorted(set(age_class_options("月案")) | set(age_class_options("年案")))
+    return render_template(
+        request,
+        "bunrei/facility_new.html",
+        user=user,
+        age_options=age_options,
+        item_options=facility_item_options(),
+        month_options=[4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3],
+        import_result={
+            "imported": imported,
+            "skipped": skipped,
+            "masked": masked,
+        } if imported is not None else None,
+    )
+
+
+@router.get("/facility/import-template.csv")
+def facility_bunrei_csv_template(user: CurrentUser):
+    require_can_edit(user)
+    return Response(
+        content=facility_import_template_csv(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="facility_bunrei_template.csv"'},
+    )
+
+
+@router.get("/facility/import-template.xlsx")
+def facility_bunrei_xlsx_template(user: CurrentUser):
+    require_can_edit(user)
+    return Response(
+        content=facility_import_template_xlsx(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="facility_bunrei_template.xlsx"'},
+    )
+
+
+@router.post("/facility")
+async def create_facility_bunrei(request: Request, user: CurrentUser):
+    _ensure_available()
+    require_can_edit(user)
+    form = await request.form()
+    plan_type = str(form.get("plan_type") or "月案")
+    age_class = str(form.get("age_class") or "5歳児")
+    item = str(form.get("item") or "活動内容")
+    month_raw = str(form.get("month") or "").strip()
+    month = int(month_raw) if month_raw.isdigit() else None
+    try:
+        add_facility_example(
+            nursery_ref=user.nursery_ref,
+            plan_type=plan_type,
+            age_class=age_class,
+            month=month,
+            item=item,
+            ryoiki=str(form.get("ryoiki") or "").strip() or None,
+            text=str(form.get("text") or ""),
+            source_note=str(form.get("source_note") or "").strip() or None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if plan_type == "年案":
+        query = urlencode({"age_class": age_class})
+        return RedirectResponse(url=f"/bunrei/annual?{query}", status_code=303)
+    query = urlencode({"age_class": age_class, "month": month or 4})
+    return RedirectResponse(url=f"/bunrei/monthly?{query}", status_code=303)
+
+
+@router.post("/facility/import")
+async def import_facility_bunrei(
+    request: Request,
+    user: CurrentUser,
+    file: UploadFile = File(...),
+    default_plan_type: str = Form("月案"),
+    default_age_class: str = Form("5歳児"),
+    default_month: str = Form(""),
+    default_item: str = Form("活動内容"),
+    default_source_note: str = Form(""),
+):
+    _ensure_available()
+    require_can_edit(user)
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="5MB以下のCSVまたはExcelファイルを選択してください")
+    month_value = int(default_month) if default_month.isdigit() else None
+    try:
+        result = import_facility_examples(
+            nursery_ref=user.nursery_ref,
+            filename=file.filename or "",
+            content=content,
+            default_plan_type=default_plan_type,
+            default_age_class=default_age_class,
+            default_month=month_value,
+            default_item=default_item,
+            default_source_note=default_source_note or None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    query = urlencode(
+        {
+            "imported": result.imported,
+            "skipped": result.skipped,
+            "masked": result.masked_rows,
+        }
+    )
+    return RedirectResponse(url=f"/bunrei/facility/new?{query}", status_code=303)
 
 
 @router.get("/monthly")
@@ -37,7 +161,7 @@ def monthly_bunrei_selector(
         selected_age_class=age_class,
         selected_month=month,
         month_options=[4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3],
-        groups=monthly_candidate_groups(age_class, month),
+        groups=monthly_candidate_groups(age_class, month, nursery_ref=user.nursery_ref),
         total_examples=count_examples(),
         default_classroom_ref=user.classroom_refs[0] if user.classroom_refs else DEFAULT_CLASSROOM_REFS[0],
     )
@@ -59,8 +183,13 @@ async def create_monthly_from_bunrei(request: Request, user: CurrentUser):
         for section_key in form
         if section_key.startswith("section_")
     }
-    selected_by_section = selected_examples(selection)
-    groups = monthly_candidate_groups(str(form.get("age_class") or "5歳児"), int(form.get("month") or 4), limit_per_section=1)
+    selected_by_section = selected_examples(selection, nursery_ref=user.nursery_ref)
+    groups = monthly_candidate_groups(
+        str(form.get("age_class") or "5歳児"),
+        int(form.get("month") or 4),
+        nursery_ref=user.nursery_ref,
+        limit_per_section=1,
+    )
     definitions = [
         _definition(group.section_key, group.section_title)
         for group in groups
@@ -94,7 +223,7 @@ def annual_bunrei_selector(
         age_options=age_class_options("年案"),
         selected_age_class=age_class,
         school_year=school_year,
-        groups=annual_candidate_groups(age_class),
+        groups=annual_candidate_groups(age_class, nursery_ref=user.nursery_ref),
         total_examples=count_examples(),
         default_classroom_ref=user.classroom_refs[0] if user.classroom_refs else DEFAULT_CLASSROOM_REFS[0],
     )
@@ -123,7 +252,7 @@ async def create_annual_from_bunrei(request: Request, user: CurrentUser):
         classroom_ref=classroom_ref,
         user=user,
         section_definitions=annual_section_definitions(),
-        selected_by_section=selected_examples(selection),
+        selected_by_section=selected_examples(selection, nursery_ref=user.nursery_ref),
         school_year=school_year,
     )
     created = document_store.create(document)
