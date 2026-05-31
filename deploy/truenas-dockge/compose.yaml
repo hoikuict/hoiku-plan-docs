@@ -1,0 +1,33 @@
+services:
+  app:
+    build:
+      context: ${HOIKU_PLAN_DOCS_SOURCE}
+      dockerfile: Dockerfile
+    image: hoiku-plan-docs-demo:truenas
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
+    restart: unless-stopped
+    environment:
+      HOIKU_FACILITY_BUNREI_DB_PATH: /data/facility.sqlite
+    volumes:
+      - type: bind
+        source: ${HOIKU_PLAN_DOCS_DATA}
+        target: /data
+    ports:
+      - "${APP_PORT:-8020}:8020"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8020/health', timeout=3).read()"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      app:
+        condition: service_healthy

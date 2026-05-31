@@ -67,6 +67,12 @@ uvicorn hoiku_plan_docs.main:app --reload --port 8020
 
 ブラウザで `http://127.0.0.1:8020/` を開くと、帳票一覧と年案・月案の作成導線が表示されます。
 
+## デモ公開
+
+TrueNAS 上の Dockge と Cloudflare Tunnel で公開デモを動かす場合は、[docs/deploy-truenas-dockge-cloudflare.md](docs/deploy-truenas-dockge-cloudflare.md) を参照してください。
+
+通常の Docker Compose / Dockge 環境で動かす場合は、[docs/deploy-dockge-cloudflare.md](docs/deploy-dockge-cloudflare.md) を参照してください。
+
 ## 主な画面
 
 - `/` : 文書作成ダッシュボード
