@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from .contracts import DOCUMENT_TYPE_LABELS, STATUS_LABELS, DocumentStatus, DocumentType
+from .contracts import DOCUMENT_TYPE_LABELS, STATUS_LABELS, DocumentStatus, DocumentType, evidence_tags_for
 
 
 @dataclass(slots=True)
@@ -15,6 +15,40 @@ class SectionBlock:
     evidence_tags: list[str]
     needs_confirmation: bool = False
     editor_note: str | None = None
+
+
+@dataclass(slots=True)
+class ScheduleColumn:
+    key: str
+    title: str
+
+
+@dataclass(slots=True)
+class ScheduleCell:
+    body: str = ""
+    source_refs: list[str] = field(default_factory=lambda: ["form.schedule"])
+    needs_confirmation: bool = False
+    editor_note: str | None = None
+
+    @property
+    def evidence_tags(self) -> list[str]:
+        return evidence_tags_for(self.source_refs)
+
+
+@dataclass(slots=True)
+class ScheduleRow:
+    row_key: str
+    label: str
+    order: int
+    start_time: str | None = None
+    cells: dict[str, ScheduleCell] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class PlanSchedule:
+    layout: str
+    columns: list[ScheduleColumn]
+    rows: list[ScheduleRow]
 
 
 @dataclass(slots=True)
@@ -31,6 +65,13 @@ class PlanDocument:
     confirmation_items: list[str] = field(default_factory=list)
     school_year: int | None = None
     target_month: str | None = None
+    target_week: str | None = None
+    week_start_date: str | None = None
+    target_date: str | None = None
+    age_class: str | None = None
+    parent_document_id: int | None = None
+    related_document_ids: list[int] = field(default_factory=list)
+    schedule: PlanSchedule | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 

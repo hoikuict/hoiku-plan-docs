@@ -1,7 +1,7 @@
 services:
   app:
     build:
-      context: ${HOIKU_PLAN_DOCS_SOURCE:-/mnt/main/apps/hoiku-plan-docs/source}
+      context: "${HOIKU_PLAN_DOCS_GIT_CONTEXT:-https://github.com/hoikuict/hoiku-plan-docs.git#main}"
       dockerfile: Dockerfile
     image: hoiku-plan-docs-demo:truenas
     pull_policy: build

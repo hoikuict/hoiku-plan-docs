@@ -7,9 +7,10 @@
 
 - `FastAPI + Jinja2` の最小 Web 構成
 - open-hoikuict / hoiku-plan-writer と合わせた職員セッション
-- 年案、月案の帳票作成 UI
+- 年案、月案、週案、日案の帳票作成 UI
 - 共通文例・園文例データベースから候補を選んで年案・月案を作成する UI
 - 作成済み帳票の一覧、詳細、印刷向けプレビュー
+- 週案の曜日グリッド、日案の時系列を含む短期計画の編集
 - 文書種別 / 状態 / セクションキー / 根拠情報の連携契約
 - 本体 DB に依存しない in-memory 保存層
 
@@ -33,6 +34,8 @@
 
 - `annual_plan`
 - `monthly_plan`
+- `weekly_plan`
+- `daily_plan`
 
 `hoiku-plan-writer` 現行コードの短い種別名は互換値として扱います。
 
@@ -52,7 +55,7 @@
 
 `section_key` は表示文言ではなく永続契約です。UI ラベルを変えてもキーは変えません。
 
-年案は `annual_goal` と `term_1_*` から `term_4_*`、月案は `monthly_goal`、`children_snapshot`、`monthly_environment`、`monthly_support`、`monthly_health_safety`、`monthly_food_education`、`monthly_events`、`monthly_10_perspectives`、`monthly_family_collaboration`、`monthly_reflection_viewpoint` を使います。
+年案は `annual_goal` と `term_1_*` から `term_4_*`、月案は `monthly_goal`、`children_snapshot`、`monthly_environment`、`monthly_support`、`monthly_health_safety`、`monthly_food_education`、`monthly_events`、`monthly_10_perspectives`、`monthly_family_collaboration`、`monthly_reflection_viewpoint` を使います。週案は `weekly_*`、日案は `daily_*` の section key と、表形式の `schedule` を使います。
 
 詳細は [docs/integration-contract.md](docs/integration-contract.md) を参照してください。
 
@@ -65,7 +68,7 @@ pip install -e .
 uvicorn hoiku_plan_docs.main:app --reload --port 8020
 ```
 
-ブラウザで `http://127.0.0.1:8020/` を開くと、帳票一覧と年案・月案の作成導線が表示されます。
+ブラウザで `http://127.0.0.1:8020/` を開くと、帳票一覧と年案・月案・週案・日案の作成導線が表示されます。
 
 ## デモ公開
 
@@ -78,6 +81,8 @@ TrueNAS 上の Dockge と Cloudflare Tunnel で公開デモを動かす場合は
 - `/` : 文書作成ダッシュボード
 - `/annual-plans/new` : 年案作成
 - `/monthly-plans/new` : 月案作成
+- `/weekly-plans/new` : 週案作成
+- `/daily-plans/new` : 日案作成
 - `/bunrei/annual` : 文例を選んで年案作成
 - `/bunrei/monthly` : 文例を選んで月案作成
 - `/bunrei/facility/new` : 自作文例の追加、CSV・Excel（.xlsx）取り込み

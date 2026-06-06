@@ -1,6 +1,45 @@
 {% extends "base.html" %}
 {% block title %}{{ document.title }} | hoiku-plan-docs{% endblock %}
 {% block content %}
+  {% macro render_schedule(schedule) %}
+    <section class="report-section report-schedule">
+      <div class="report-section__heading">
+        <h2>{{ "1日の流れ" if schedule.layout == "daily_timeline" else "週の活動" }}</h2>
+      </div>
+      <div class="schedule-scroll">
+        <table class="schedule-table">
+          <thead>
+            <tr>
+              <th>{{ "時間" if schedule.layout == "daily_timeline" else "曜日" }}</th>
+              {% for column in schedule.columns %}
+                <th>{{ column.title }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in schedule.rows|sort(attribute="order") %}
+              <tr>
+                <th scope="row">
+                  {% if row.start_time %}<span class="schedule-time">{{ row.start_time }}</span>{% endif %}
+                  <span>{{ row.label }}</span>
+                </th>
+                {% for column in schedule.columns %}
+                  {% set cell = row.cells.get(column.key) %}
+                  <td>
+                    {{ cell.body if cell else "" }}
+                    {% if cell and cell.needs_confirmation %}
+                      <div class="inline-note">{{ cell.editor_note or "確認が必要です。" }}</div>
+                    {% endif %}
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endmacro %}
+
   <section class="document-header">
     <div>
       <p class="eyebrow">{{ document.document_type_label }}</p>
@@ -40,9 +79,17 @@
   <article class="report-sheet">
     <header class="report-sheet__meta">
       <span>{{ document.document_type_label }}</span>
-      <span>{% if document.school_year %}{{ document.school_year }}年度{% endif %}{% if document.target_month %}{{ document.target_month }}{% endif %}</span>
+      <span>
+        {% if document.school_year %}{{ document.school_year }}年度{% endif %}
+        {% if document.target_month %}{{ document.target_month }}{% endif %}
+        {% if document.target_week %}{{ document.target_week }}（{{ document.week_start_date }}〜）{% endif %}
+        {% if document.target_date %}{{ document.target_date }}{% endif %}
+      </span>
       <span>{{ document.status_label }}</span>
     </header>
+    {% if document.schedule and document.schedule.layout == "daily_timeline" %}
+      {{ render_schedule(document.schedule) }}
+    {% endif %}
     {% for section in document.sections %}
       <section class="report-section">
         <div class="report-section__heading">
@@ -61,5 +108,8 @@
         {% endif %}
       </section>
     {% endfor %}
+    {% if document.schedule and document.schedule.layout == "weekly_grid" %}
+      {{ render_schedule(document.schedule) }}
+    {% endif %}
   </article>
 {% endblock %}

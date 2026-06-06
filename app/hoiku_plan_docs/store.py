@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from threading import Lock
+from typing import Mapping
 
 from .contracts import DocumentStatus, DocumentType
-from .models import PlanDocument
+from .models import PlanDocument, ScheduleCell
 
 
 class DocumentStore:
@@ -61,6 +62,7 @@ class DocumentStore:
         owner_name: str,
         confirmation_items: list[str],
         section_updates: dict[str, dict[str, object]],
+        schedule_form: Mapping[str, str] | None = None,
     ) -> PlanDocument | None:
         document = self.get(document_id)
         if document is None:
@@ -76,6 +78,23 @@ class DocumentStore:
             section.needs_confirmation = bool(update.get("needs_confirmation"))
             editor_note = str(update.get("editor_note") or "").strip()
             section.editor_note = editor_note or None
+        if document.schedule and schedule_form is not None:
+            for row in document.schedule.rows:
+                new_label = schedule_form.get(f"rowlabel__{row.row_key}")
+                if new_label is not None:
+                    row.label = new_label.strip() or row.label
+                new_time = schedule_form.get(f"rowtime__{row.row_key}")
+                if new_time is not None:
+                    row.start_time = new_time.strip() or None
+                for column in document.schedule.columns:
+                    value = schedule_form.get(f"cell__{row.row_key}__{column.key}")
+                    if value is None:
+                        continue
+                    cell = row.cells.setdefault(column.key, ScheduleCell())
+                    cell.body = value.strip()
+                    if cell.needs_confirmation and cell.body:
+                        cell.needs_confirmation = False
+                        cell.editor_note = None
         document.updated_at = datetime.now(UTC)
         return document
 

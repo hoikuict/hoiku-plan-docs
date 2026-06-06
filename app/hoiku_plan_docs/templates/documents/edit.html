@@ -55,6 +55,45 @@
       </div>
     </section>
 
+    {% if document.schedule %}
+      <section class="form-panel">
+        <h2>{{ "1日の流れ" if document.schedule.layout == "daily_timeline" else "週の活動" }}</h2>
+        <div class="schedule-edit-list">
+          {% for row in document.schedule.rows|sort(attribute="order") %}
+            <div class="schedule-edit-row">
+              <div class="field-grid">
+                <label>
+                  <span>{{ "時間帯" if document.schedule.layout == "daily_timeline" else "曜日" }}</span>
+                  <input name="rowlabel__{{ row.row_key }}" type="text" value="{{ row.label }}">
+                </label>
+                {% if document.schedule.layout == "daily_timeline" %}
+                  <label>
+                    <span>開始時刻</span>
+                    <input name="rowtime__{{ row.row_key }}" type="time" value="{{ row.start_time or '' }}">
+                  </label>
+                {% endif %}
+              </div>
+              <div class="field-grid">
+                {% for column in document.schedule.columns %}
+                  {% set cell = row.cells.get(column.key) %}
+                  <label>
+                    <span>{{ column.title }}</span>
+                    <textarea name="cell__{{ row.row_key }}__{{ column.key }}" rows="4">{{ cell.body if cell else "" }}</textarea>
+                  </label>
+                {% endfor %}
+              </div>
+              {% for column in document.schedule.columns %}
+                {% set cell = row.cells.get(column.key) %}
+                {% if cell and cell.needs_confirmation %}
+                  <div class="inline-note">{{ cell.editor_note or "確認が必要です。" }}</div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
     <div class="form-actions">
       <a class="button button--ghost" href="/documents/{{ document.id }}">戻る</a>
       <button class="button button--primary" type="submit">修正を保存</button>

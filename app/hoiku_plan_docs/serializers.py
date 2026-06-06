@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .models import PlanDocument, SectionBlock
+from .models import PlanDocument, PlanSchedule, ScheduleCell, SectionBlock
 
 
 def section_to_dict(section: SectionBlock) -> dict[str, object]:
@@ -15,8 +15,41 @@ def section_to_dict(section: SectionBlock) -> dict[str, object]:
     }
 
 
-def document_to_dict(document: PlanDocument) -> dict[str, object]:
+def schedule_cell_to_dict(cell: ScheduleCell) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "body": cell.body,
+        "source_refs": cell.source_refs,
+        "evidence_tags": cell.evidence_tags,
+        "needs_confirmation": cell.needs_confirmation,
+    }
+    if cell.editor_note:
+        payload["editor_note"] = cell.editor_note
+    return payload
+
+
+def schedule_to_dict(schedule: PlanSchedule) -> dict[str, object]:
     return {
+        "layout": schedule.layout,
+        "columns": [{"key": column.key, "title": column.title} for column in schedule.columns],
+        "rows": [
+            {
+                "row_key": row.row_key,
+                "label": row.label,
+                "order": row.order,
+                **({"start_time": row.start_time} if row.start_time else {}),
+                "cells": {
+                    column.key: schedule_cell_to_dict(row.cells[column.key])
+                    for column in schedule.columns
+                    if column.key in row.cells
+                },
+            }
+            for row in sorted(schedule.rows, key=lambda item: item.order)
+        ],
+    }
+
+
+def document_to_dict(document: PlanDocument) -> dict[str, object]:
+    payload: dict[str, object] = {
         "id": document.id,
         "document_type": document.document_type.value,
         "document_type_label": document.document_type_label,
@@ -34,3 +67,22 @@ def document_to_dict(document: PlanDocument) -> dict[str, object]:
         "created_at": document.created_at.isoformat(),
         "updated_at": document.updated_at.isoformat(),
     }
+    if document.target_week:
+        payload["target_week"] = document.target_week
+    if document.week_start_date:
+        payload["week_start_date"] = document.week_start_date
+    if document.target_date:
+        payload["target_date"] = document.target_date
+    if document.age_class:
+        payload["age_class"] = document.age_class
+    if document.parent_document_id is not None:
+        payload["parent_document_id"] = document.parent_document_id
+    if document.related_document_ids:
+        payload["related_document_ids"] = document.related_document_ids
+    if document.schedule is not None:
+        payload["schedule"] = schedule_to_dict(document.schedule)
+    return payload
+
+
+serialize_document = document_to_dict
+serialize_schedule = schedule_to_dict

@@ -72,3 +72,9 @@ Cloudflare の Public Hostname は `http://app:8020` を指します。`localhos
 - 園文例アップロードは `hoiku_plan_docs_data` volume に保存されます。
 - 帳票一覧や作成済み帳票は現在 in-memory なので、コンテナ再起動で初期化されます。
 - デモを初期化したい場合は、stack 停止後に `hoiku_plan_docs_data` volume を削除してください。
+
+## よくあるエラー
+
+### `pull access denied for hoiku-plan-docs-demo`
+
+ローカルで build する app image を Docker Hub から pull しようとしています。Dockge では初回は `デプロイ` を使うか、Shell で `docker compose build app` のあと `docker compose up -d` を実行してください。

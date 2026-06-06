@@ -4,6 +4,7 @@ services:
       context: ../..
       dockerfile: Dockerfile
     image: hoiku-plan-docs-demo:local
+    pull_policy: build
     restart: unless-stopped
     environment:
       HOIKU_FACILITY_BUNREI_DB_PATH: /data/facility.sqlite

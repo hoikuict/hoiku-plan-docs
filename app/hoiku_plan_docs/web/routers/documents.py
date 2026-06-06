@@ -72,6 +72,7 @@ async def update_document(document_id: int, request: Request, user: CurrentUser)
         raise HTTPException(status_code=409, detail="この状態の文書は修正できません")
 
     form = await request.form()
+    form_values = {str(key): str(value) for key, value in form.multi_items()}
     title = str(form.get("title") or document.title).strip() or document.title
     owner_name = str(form.get("owner_name") or document.owner_name).strip() or document.owner_name
     if "confirmation_items" in form:
@@ -101,6 +102,7 @@ async def update_document(document_id: int, request: Request, user: CurrentUser)
         owner_name=owner_name,
         confirmation_items=confirmation_items,
         section_updates=section_updates,
+        schedule_form=form_values,
     )
     if updated is None:
         raise HTTPException(status_code=404, detail="文書が見つかりません")

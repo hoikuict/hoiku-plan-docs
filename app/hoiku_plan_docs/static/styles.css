@@ -547,6 +547,57 @@ code {
   color: #7d432c;
 }
 
+.schedule-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.schedule-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+}
+
+.schedule-table th,
+.schedule-table td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.schedule-table thead th {
+  background: #f0f5f3;
+  color: var(--primary-strong);
+}
+
+.schedule-table th[scope="row"] {
+  width: 9rem;
+  white-space: normal;
+}
+
+.schedule-time {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.schedule-edit-list {
+  display: grid;
+  gap: 14px;
+}
+
+.schedule-edit-row {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+}
+
 .logout-form {
   margin-top: 12px;
 }
@@ -708,5 +759,21 @@ code {
   .document-header,
   .report-sheet {
     box-shadow: none;
+  }
+
+  .schedule-scroll {
+    overflow: visible;
+  }
+
+  .schedule-table {
+    min-width: 0;
+  }
+
+  .schedule-table thead {
+    display: table-header-group;
+  }
+
+  .schedule-table tr {
+    page-break-inside: avoid;
   }
 }

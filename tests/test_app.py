@@ -154,12 +154,125 @@ class AppTestCase(unittest.TestCase):
         self.assertIn("管理者", home.text)
 
     def test_plan_forms_show_single_class_field(self) -> None:
-        for path in ("/annual-plans/new", "/monthly-plans/new", "/bunrei/annual", "/bunrei/monthly"):
+        for path in (
+            "/annual-plans/new",
+            "/monthly-plans/new",
+            "/weekly-plans/new",
+            "/daily-plans/new",
+            "/bunrei/annual",
+            "/bunrei/monthly",
+        ):
             with self.subTest(path=path):
                 response = self.client.get(path)
                 self.assertEqual(response.status_code, 200)
                 self.assertNotIn("クラス名", response.text)
                 self.assertEqual(response.text.count("<span>クラス</span>"), 1)
+
+    def test_weekly_plan_can_be_created_with_schedule(self) -> None:
+        self.client.post(
+            "/monthly-plans",
+            data={
+                "target_month": "2026-04",
+                "classroom_ref": "5歳児 ひまわり組",
+                "related_annual_summary": "春は安心して関係を広げる。",
+                "previous_reflection": "友だちと相談する姿が増えた。",
+                "current_children_snapshot": "素材を選びながら遊びを広げている。",
+            },
+        )
+        response = self.client.post(
+            "/weekly-plans",
+            data={
+                "target_week": "2026-W16",
+                "classroom_ref": "5歳児 ひまわり組",
+                "age_class": "5歳児",
+                "owner_name": "担任",
+                "parent_document_id": "1",
+                "related_monthly_summary": "春の自然に触れながら友だちと遊びを広げる。",
+                "previous_week_reflection": "虫探しから図鑑や制作へ関心が広がった。",
+                "current_children_snapshot": "友だちの発見を聞き、試したい素材を選んでいる。",
+                "weekly_activities_note": "園庭で見つけたものを描く、作る、調べる。",
+                "include_saturday": "on",
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 303)
+        payload = self.client.get("/api/documents/2").json()
+        self.assertEqual(payload["document_type"], "weekly_plan")
+        self.assertEqual(payload["target_week"], "2026-W16")
+        self.assertEqual(payload["week_start_date"], "2026-04-13")
+        self.assertEqual(payload["age_class"], "5歳児")
+        self.assertEqual(payload["parent_document_id"], 1)
+        self.assertEqual(payload["schedule"]["layout"], "weekly_grid")
+        self.assertEqual([row["row_key"] for row in payload["schedule"]["rows"]], ["mon", "tue", "wed", "thu", "fri", "sat"])
+        self.assertIn("monthly.related_context", payload["sections"][0]["source_refs"])
+
+    def test_daily_plan_can_be_created_and_schedule_cell_edited(self) -> None:
+        self.client.post(
+            "/weekly-plans",
+            data={
+                "target_week": "2026-W16",
+                "classroom_ref": "5歳児 ひまわり組",
+                "age_class": "5歳児",
+                "related_monthly_summary": "月案のねらいを受ける。",
+                "previous_week_reflection": "素材を選ぶ姿が見られた。",
+                "current_children_snapshot": "友だちと考えを伝え合っている。",
+                "weekly_activities_note": "園庭で見つけたものを表現する。",
+            },
+        )
+        response = self.client.post(
+            "/daily-plans",
+            data={
+                "target_date": "2026-04-14",
+                "classroom_ref": "5歳児 ひまわり組",
+                "age_class": "5歳児",
+                "owner_name": "担任",
+                "parent_document_id": "1",
+                "related_weekly_summary": "園庭で見つけたものを表現する。",
+                "current_children_snapshot": "友だちの発見に刺激を受けている。",
+                "daily_main_activity_note": "",
+                "health_notes": "気温が上がるため水分補給を意識する。",
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 303)
+        payload = self.client.get("/api/documents/2").json()
+        self.assertEqual(payload["document_type"], "daily_plan")
+        self.assertEqual(payload["schedule"]["layout"], "daily_timeline")
+        main_row = next(row for row in payload["schedule"]["rows"] if row["row_key"] == "t_main")
+        self.assertTrue(main_row["cells"]["children"]["needs_confirmation"])
+        self.assertTrue(main_row["cells"]["support"]["needs_confirmation"])
+        self.assertIn("主活動の子どもの姿と援助", payload["confirmation_items"])
+        self.assertIn("weekly.related_context", payload["sections"][0]["source_refs"])
+
+        response = self.client.post(
+            "/documents/2",
+            data={
+                "title": payload["title"],
+                "owner_name": payload["owner_name"],
+                "confirmation_items": "\n".join(payload["confirmation_items"]),
+                "cell__t_main__children": "葉や石を見比べ、形や色の違いを言葉にする。",
+                "cell__t_main__support": "気づきを受け止め、描く・並べる・調べる素材を選べるようにする。",
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 303)
+        edited = self.client.get("/api/documents/2").json()
+        edited_main = next(row for row in edited["schedule"]["rows"] if row["row_key"] == "t_main")
+        self.assertEqual(edited_main["cells"]["children"]["body"], "葉や石を見比べ、形や色の違いを言葉にする。")
+        self.assertFalse(edited_main["cells"]["children"]["needs_confirmation"])
+        self.assertFalse(edited_main["cells"]["support"]["needs_confirmation"])
+
+    def test_view_only_cannot_create_weekly_or_daily_plan(self) -> None:
+        weekly = self.client.post(
+            "/weekly-plans?as=view_only",
+            data={"target_week": "2026-W16", "classroom_ref": "5歳児 ひまわり組", "age_class": "5歳児"},
+        )
+        daily = self.client.post(
+            "/daily-plans?as=view_only",
+            data={"target_date": "2026-04-14", "classroom_ref": "5歳児 ひまわり組", "age_class": "5歳児"},
+        )
+        self.assertEqual(weekly.status_code, 403)
+        self.assertEqual(daily.status_code, 403)
 
     def test_edit_created_document(self) -> None:
         self.client.post(

@@ -20,17 +20,23 @@ ROLE_LABELS: dict[Role, str] = {
 class DocumentType(StrEnum):
     ANNUAL_PLAN = "annual_plan"
     MONTHLY_PLAN = "monthly_plan"
+    WEEKLY_PLAN = "weekly_plan"
+    DAILY_PLAN = "daily_plan"
 
 
 DOCUMENT_TYPE_LABELS: dict[DocumentType, str] = {
     DocumentType.ANNUAL_PLAN: "年案",
     DocumentType.MONTHLY_PLAN: "月案",
+    DocumentType.WEEKLY_PLAN: "週案",
+    DocumentType.DAILY_PLAN: "日案",
 }
 
 
 DOCUMENT_TYPE_ALIASES = {
     "annual": DocumentType.ANNUAL_PLAN,
     "monthly": DocumentType.MONTHLY_PLAN,
+    "weekly": DocumentType.WEEKLY_PLAN,
+    "daily": DocumentType.DAILY_PLAN,
 }
 
 
@@ -62,11 +68,23 @@ SOURCE_REF_PREFIX_TAGS = {
     "form.": "入力",
     "annual.": "入力",
     "monthly.": "入力",
+    "weekly.": "入力",
+    "daily.": "入力",
     "bunrei.": "文例",
     "facility.": "園文例",
     "outline.": "AI構成",
     "linking.": "AI構成",
 }
+
+
+AGE_CLASS_OPTIONS: tuple[str, ...] = (
+    "0歳児",
+    "1歳児",
+    "2歳児",
+    "3歳児",
+    "4歳児",
+    "5歳児",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,6 +126,27 @@ MONTHLY_SECTIONS: tuple[SectionDefinition, ...] = (
     SectionDefinition("monthly_reflection_viewpoint", "月末の振り返り観点", "次月につなぐ確認観点"),
 )
 
+WEEKLY_SECTIONS: tuple[SectionDefinition, ...] = (
+    SectionDefinition("weekly_goal", "今週のねらい", "月案を受けた1週間の中心目標"),
+    SectionDefinition("weekly_children_snapshot", "前週の子どもの姿", "直近の姿の捉えと連続性"),
+    SectionDefinition("weekly_activities", "主な活動・経験", "週内に予想または用意する活動"),
+    SectionDefinition("weekly_environment", "環境構成", "週の環境構成"),
+    SectionDefinition("weekly_support", "保育者の援助・配慮", "週の援助方針"),
+    SectionDefinition("weekly_health_safety", "健康・安全への配慮", "保健・安全面の配慮"),
+    SectionDefinition("weekly_family_collaboration", "家庭連携", "保護者との連携方針"),
+    SectionDefinition("weekly_reflection_viewpoint", "週の評価・反省", "次週へつなぐ振り返り観点"),
+)
+
+DAILY_SECTIONS: tuple[SectionDefinition, ...] = (
+    SectionDefinition("daily_goal", "本日のねらい", "その日の中心目標"),
+    SectionDefinition("daily_children_snapshot", "前日までの子どもの姿", "直近の姿と連続性"),
+    SectionDefinition("daily_main_activity", "主な活動", "中心活動とねらいとの関係"),
+    SectionDefinition("daily_health_safety", "健康・安全への配慮", "当日の保健・安全"),
+    SectionDefinition("daily_food_education", "食育", "給食・おやつの配慮"),
+    SectionDefinition("daily_family_collaboration", "家庭連携", "送迎時の伝達など"),
+    SectionDefinition("daily_reflection_viewpoint", "本日の評価・反省", "翌日・翌週へつなぐ振り返り観点"),
+)
+
 
 def annual_section_definitions() -> list[SectionDefinition]:
     definitions = list(ANNUAL_BASE_SECTIONS)
@@ -128,6 +167,10 @@ def section_definitions(document_type: DocumentType) -> list[SectionDefinition]:
         return annual_section_definitions()
     if document_type == DocumentType.MONTHLY_PLAN:
         return list(MONTHLY_SECTIONS)
+    if document_type == DocumentType.WEEKLY_PLAN:
+        return list(WEEKLY_SECTIONS)
+    if document_type == DocumentType.DAILY_PLAN:
+        return list(DAILY_SECTIONS)
     raise ValueError(f"Unsupported document_type: {document_type}")
 
 

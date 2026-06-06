@@ -5,7 +5,7 @@
 
 ## 対象範囲
 
-対象は年案・月案の作成、レビュー、承認、参照です。
+対象は年案・月案・週案・日案の作成、レビュー、承認、参照です。
 園児、家庭、出欠、本体職員 DB には直接依存しません。本体側の値は安定した識別情報として受け取ります。
 
 ## 職員認証
@@ -40,6 +40,8 @@
 | --- | --- | --- |
 | `annual_plan` | 年案 | 年間指導計画 |
 | `monthly_plan` | 月案 | 月間指導計画 |
+| `weekly_plan` | 週案 | 週間指導計画 |
+| `daily_plan` | 日案 | 日間指導計画 |
 
 互換 alias:
 
@@ -47,6 +49,8 @@
 | --- | --- |
 | `annual` | `annual_plan` |
 | `monthly` | `monthly_plan` |
+| `weekly` | `weekly_plan` |
+| `daily` | `daily_plan` |
 
 ### 状態
 
@@ -77,6 +81,12 @@
   "actor_ref": "職員:担任",
   "school_year": 2026,
   "target_month": null,
+  "target_week": null,
+  "week_start_date": null,
+  "target_date": null,
+  "age_class": null,
+  "parent_document_id": null,
+  "related_document_ids": [],
   "sections": [
     {
       "section_key": "annual_goal",
@@ -88,9 +98,31 @@
       "editor_note": null
     }
   ],
+  "schedule": {
+    "layout": "daily_timeline",
+    "columns": [{"key": "env", "title": "環境構成"}],
+    "rows": [
+      {
+        "row_key": "t_main",
+        "label": "主な活動",
+        "order": 40,
+        "start_time": "10:15",
+        "cells": {
+          "env": {
+            "body": "...",
+            "source_refs": ["form.schedule"],
+            "evidence_tags": ["入力"],
+            "needs_confirmation": false
+          }
+        }
+      }
+    ]
+  },
   "confirmation_items": []
 }
 ```
+
+`target_week` / `week_start_date` / `target_date` / `age_class` / `parent_document_id` / `related_document_ids` / `schedule` は追加フィールドです。年案・月案では省略されることがあります。週案・日案では `schedule` を持ち、`layout`、`columns[].key`、`rows[].row_key` は永続契約です。
 
 ## セクションキー
 
@@ -137,6 +169,42 @@
 | `monthly_family_collaboration` | 家庭連携 |
 | `monthly_reflection_viewpoint` | 月末の振り返り観点 |
 
+### 週案
+
+| section_key | title |
+| --- | --- |
+| `weekly_goal` | 今週のねらい |
+| `weekly_children_snapshot` | 前週の子どもの姿 |
+| `weekly_activities` | 主な活動・経験 |
+| `weekly_environment` | 環境構成 |
+| `weekly_support` | 保育者の援助・配慮 |
+| `weekly_health_safety` | 健康・安全への配慮 |
+| `weekly_family_collaboration` | 家庭連携 |
+| `weekly_reflection_viewpoint` | 週の評価・反省 |
+
+### 日案
+
+| section_key | title |
+| --- | --- |
+| `daily_goal` | 本日のねらい |
+| `daily_children_snapshot` | 前日までの子どもの姿 |
+| `daily_main_activity` | 主な活動 |
+| `daily_health_safety` | 健康・安全への配慮 |
+| `daily_food_education` | 食育 |
+| `daily_family_collaboration` | 家庭連携 |
+| `daily_reflection_viewpoint` | 本日の評価・反省 |
+
+## schedule 契約
+
+週案・日案は表形式の `schedule` を持ちます。本文セクションと同様に、`layout`、`column.key`、`row_key` は表示ラベルが変わっても変更しない永続識別子です。
+
+| layout | document_type | column.key |
+| --- | --- | --- |
+| `weekly_grid` | `weekly_plan` | `activity` / `support` |
+| `daily_timeline` | `daily_plan` | `env` / `children` / `support` |
+
+週案の `row_key` は `mon` / `tue` / `wed` / `thu` / `fri` / `sat`、日案の `row_key` は `t_arrival` / `t_free_am` / `t_meeting` / `t_main` / `t_lunch` / `t_nap` / `t_free_pm` / `t_departure` などを使います。0〜2歳児では `t_care_am` / `t_care_pm` など個別の生活リズムに関する行を含みます。
+
 ## 根拠情報と表示タグ
 
 `source_refs` は文字列配列です。prefix から表示タグを再計算します。
@@ -148,6 +216,8 @@
 | `form.*` | `入力` |
 | `annual.*` | `入力` |
 | `monthly.*` | `入力` |
+| `weekly.*` | `入力` |
+| `daily.*` | `入力` |
 | `bunrei.*` | `文例` |
 | `facility.*` | `園文例` |
 | `outline.*` | `AI構成` |
@@ -194,6 +264,7 @@
 - 既存 `document_type` の削除または意味変更
 - 既存 `status` の削除または意味変更
 - 既存 `section_key` の削除または意味変更
+- 既存 `schedule.layout`、`schedule.columns[].key`、`schedule.rows[].row_key` の削除または意味変更
 - `source_refs` prefix ルールの変更
 - `actor_ref`、`nursery_ref`、`classroom_ref` の意味変更
 
